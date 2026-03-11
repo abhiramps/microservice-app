@@ -33,7 +33,12 @@ function getCircuitBreaker(serviceName: string): CircuitBreaker {
       logger.info(`Circuit breaker CLOSED for ${serviceName}`);
     });
 
-    breaker.fallback(() => {
+    breaker.on('failure', (err: any) => {
+      logger.error(`Circuit breaker FAILURE for ${serviceName}:`, { message: err.message, code: err.code });
+    });
+
+    breaker.fallback((err: any) => {
+      logger.warn(`Circuit breaker FALLBACK for ${serviceName}:`, { message: err?.message, code: err?.code });
       return {
         status: 503,
         data: { success: false, error: `${serviceName} is currently unavailable. Please try again later.` },
@@ -68,6 +73,7 @@ export async function proxyRequest(
     },
     data: body,
     timeout: 10000,
+    validateStatus: (status: number) => status < 500,
   };
 
   const response: any = await breaker.fire(axiosConfig);

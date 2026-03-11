@@ -15,7 +15,7 @@
     "sequelize": "^6.35.0",
     "pg": "^8.11.3",
     "pg-hstore": "^2.3.4",
-    "bcrypt": "^5.1.1",
+    "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "joi": "^17.11.0",
     "amqplib": "^0.10.3",
@@ -25,7 +25,7 @@
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
-    "@types/bcrypt": "^5.0.2",
+    "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/amqplib": "^0.10.4",
     "@types/cors": "^2.8.17",

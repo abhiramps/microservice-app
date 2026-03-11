@@ -1,10 +1,10 @@
-import amqp, { Connection, Channel } from 'amqplib';
+import amqp from 'amqplib';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 
 class RabbitMQConnection {
-  private connection: Connection | null = null;
-  private channel: Channel | null = null;
+  private connection: any = null;
+  private channel: any = null;
   private retryCount = 0;
   private maxRetries = 5;
 
@@ -34,7 +34,7 @@ class RabbitMQConnection {
     }
   }
 
-  getChannel(): Channel {
+  getChannel(): any {
     if (!this.channel) throw new Error('RabbitMQ channel not initialized');
     return this.channel;
   }

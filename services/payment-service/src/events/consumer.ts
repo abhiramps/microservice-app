@@ -27,7 +27,7 @@ export async function startConsumers(): Promise<void> {
 
   await channel.prefetch(1);
 
-  channel.consume(queueName, async (msg) => {
+  channel.consume(queueName, async (msg: any) => {
     if (!msg) return;
 
     try {
