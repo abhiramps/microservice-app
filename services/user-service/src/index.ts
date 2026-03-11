@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import { config } from './config';
 import { connectDatabase } from './config/database';
+import { authRoutes } from './routes/auth.routes';
+import { userRoutes } from './routes/user.routes';
 import { logger } from './utils/logger';
 
 const app = express();
@@ -13,6 +15,9 @@ app.use(express.json());
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'user-service' });
 });
+
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
 async function start(): Promise<void> {
   try {
