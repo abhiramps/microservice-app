@@ -1,0 +1,10 @@
+{
+  "name": "ecommerce-microservices",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Educational e-commerce microservices platform",
+  "scripts": {
+    "docker:up": "docker-compose up --build",
+    "docker:down": "docker-compose down -v"
+  }
+}
