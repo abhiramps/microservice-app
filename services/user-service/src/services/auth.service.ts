@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
 import { User } from '../models/User';
 import { config } from '../config';
 import { logger } from '../utils/logger';
@@ -57,7 +58,7 @@ export class AuthService {
 
   private generateToken(user: User): string {
     return jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
+      { userId: user.id, email: user.email, role: user.role, jti: uuidv4() },
       config.jwt.secret,
       { expiresIn: config.jwt.expiresIn as any }
     );

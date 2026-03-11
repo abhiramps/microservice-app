@@ -69,6 +69,8 @@ Responsibilities:
 Route structure:
 - POST /api/auth/register → User Service (public)
 - POST /api/auth/login → User Service (public)
+- POST /api/auth/logout → API Gateway (protected, revokes current session)
+- POST /api/auth/revoke-all-sessions → API Gateway (protected, revokes all sessions)
 - GET /api/users/profile → User Service (protected)
 - GET /api/products → Product Service (public)
 - GET /api/products/:id → Product Service (public)

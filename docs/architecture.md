@@ -139,6 +139,31 @@ All infrastructure services include health checks. Application services wait for
 
 ---
 
+## Session Management (JWT + Redis Allowlist)
+
+JWTs are not purely stateless in this app. Each token is tracked in Redis as an active session, enabling token revocation before expiry.
+
+**How it works:**
+
+1. **Login/Register:** User service generates a JWT with a unique `jti` (JWT ID) claim. The API gateway intercepts the successful response, decodes the token, and stores a session in Redis:
+   ```
+   Key:   session:{userId}:{jti}
+   Value: { email, role, createdAt }
+   TTL:   24 hours (matches JWT expiry)
+   ```
+
+2. **Request validation:** The auth middleware verifies the JWT signature, then checks `EXISTS session:{userId}:{jti}` in Redis. If the key is missing, the token is considered revoked and returns 401.
+
+3. **Logout:** `POST /api/auth/logout` deletes `session:{userId}:{jti}` from Redis. The token is immediately invalid.
+
+4. **Revoke all sessions:** `POST /api/auth/revoke-all-sessions` scans and deletes all `session:{userId}:*` keys. Useful after password changes.
+
+**Multiple sessions** are supported — each login creates a new session entry. Logging out one device doesn't affect others.
+
+**Fail-open behavior:** If Redis is unavailable, the auth middleware allows the request through (falls back to stateless JWT validation). This prevents Redis outages from locking out all users.
+
+---
+
 ## Request Flow
 
 A typical authenticated request flows through the system like this:
@@ -148,6 +173,9 @@ A typical authenticated request flows through the system like this:
 2. Correlation ID middleware assigns x-correlation-id (UUID)
 3. Rate limiter checks Redis sliding window for client IP
 4. If protected route: JWT auth middleware validates token
+   - Verifies JWT signature and expiry
+   - Checks Redis for active session (session:{userId}:{jti})
+   - If session not found: returns 401 "Token revoked"
    - Extracts userId, email, role from JWT payload
    - Sets x-user-id, x-user-email, x-user-role headers
 5. If admin route: authorization middleware checks role
@@ -369,6 +397,40 @@ Content-Type: application/json
 ```
 
 Response (200): Same shape as register.
+
+#### Logout
+
+```
+POST /api/auth/logout
+Authorization: Bearer <token>
+```
+
+Response (200):
+```json
+{
+  "success": true,
+  "data": { "message": "Logged out successfully" }
+}
+```
+
+Revokes the current session. The token becomes invalid immediately.
+
+#### Revoke All Sessions
+
+```
+POST /api/auth/revoke-all-sessions
+Authorization: Bearer <token>
+```
+
+Response (200):
+```json
+{
+  "success": true,
+  "data": { "message": "3 session(s) revoked" }
+}
+```
+
+Logs out from all devices. Useful after a password change or security concern.
 
 ### Users (Protected)
 
