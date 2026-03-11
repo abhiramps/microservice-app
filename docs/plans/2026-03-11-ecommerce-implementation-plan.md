@@ -3644,3 +3644,44 @@ git commit -m "feat: verify graceful shutdown across all services"
 9. `feat: add API gateway with JWT auth, rate limiting, circuit breaker, and proxy routing`
 10. `fix: integration testing fixes`
 11. `feat: verify graceful shutdown across all services`
+12. `fix: resolve Docker runtime issues and improve service reliability`
+
+---
+
+## Post-Implementation Bugfixes
+
+The following issues were discovered during Docker integration testing and fixed in commit `fb715c3`:
+
+### Bug 1: `bcrypt` Segfault on Alpine Linux (Critical)
+
+**Symptom:** The user-service container started successfully but crashed with exit code 139 (SIGSEGV) on the first registration or login request that triggered password hashing.
+
+**Root Cause:** The `bcrypt` npm package is a native C++ addon compiled against glibc. The Docker image uses `node:20-alpine`, which runs on Alpine Linux with musl libc instead of glibc. When bcrypt's native code ran, the libc mismatch caused a segmentation fault.
+
+**Fix:**
+- Replaced `bcrypt` with `bcryptjs` (pure JavaScript implementation) in `services/user-service/package.json`
+- Updated import in `services/user-service/src/models/User.ts` from `'bcrypt'` to `'bcryptjs'`
+- Updated type dependency from `@types/bcrypt` to `@types/bcryptjs`
+
+**Lesson:** When using Alpine-based Docker images, avoid npm packages with native C++ bindings, or use the full `node:20` image instead.
+
+### Bug 2: Circuit Breaker Tripping on Client Errors (Moderate)
+
+**Symptom:** The API gateway returned "service unavailable" (503) even when downstream services were healthy, after any 4xx response (e.g., validation error).
+
+**Root Cause:** Axios throws an error for any non-2xx HTTP status by default. The circuit breaker (opossum) counted these thrown errors as failures. After enough 4xx client errors (validation failures, 404s), the circuit breaker opened and blocked all traffic to that service.
+
+**Fix:** Added `validateStatus: (status: number) => status < 500` to the axios config in `services/api-gateway/src/middleware/circuit-breaker.ts`. Only 5xx server errors now count as circuit breaker failures.
+
+**Lesson:** Circuit breakers should distinguish between client errors (4xx) and server errors (5xx). Client errors indicate bad requests, not service degradation.
+
+### Bug 3: Unnecessary Docker Compose Settings (Minor)
+
+- Removed `dns: 127.0.0.11` from api-gateway service — this is already the Docker default and could interfere with DNS resolution
+- Removed obsolete `version: '3.8'` field — modern Docker Compose ignores it and logs deprecation warnings
+
+### Additional Changes
+
+- All service `tsconfig.json` files now inline compiler options instead of extending `../../tsconfig.base.json`, ensuring each service builds independently in its Docker context
+- Added `@types/opossum` to api-gateway devDependencies for proper TypeScript support
+- Fixed TypeScript type annotations in RabbitMQ connection managers and event consumers across all services
